@@ -6,9 +6,13 @@
 
 # --- General settings and variables -------------------------------------------
 
+# The so-called strict mode (see https://mywiki.wooledge.org/BashFAQ/105)
 set -e           # "exit-on-error" shell option
 set -o pipefail  # exit on within-pipe error
 set -u           # "no-unset" shell option
+
+# Set up error handling
+trap 'handle_error ${LINENO}' ERR
 
 # ==============================================================================
 # NOTE on -e option
@@ -59,9 +63,12 @@ now="$(date +"%Y.%m.%d_%H.%M.%S")"
 start=$(date +%s)
 
 # For a friendlier use of colors in Bash
-red=$'\e[1;31m'
-grn=$'\e[1;32m'
-yel=$'\e[1;33m'
+red=$'\e[1;31m' # Red
+grn=$'\e[1;32m' # Green
+yel=$'\e[1;33m' # Yellow
+blu=$'\e[1;34m' # Blue
+mag=$'\e[1;35m' # Magenta
+cya=$'\e[1;36m' # Cyan
 end=$'\e[0m'
 
 # --- Function definition ------------------------------------------------------
@@ -69,6 +76,15 @@ end=$'\e[0m'
 # Default options
 ver="0.0.0"
 verbose=true
+
+# Error handling function
+function handle_error {
+	local err_exit=$?
+	local line_number=$1
+	printf "\n${mag}ERROR occurred on line: ${cya}${line_number}${end}\n"
+	printf "  |__ ${cya}Exit status ${err_exit}${end}\n"
+	exit $err_exit
+}
 
 # Help message
 _help_scriptname=""
@@ -106,7 +122,7 @@ function _dual_log {
 # --- Argument parsing ---------------------------------------------------------
 
 # Flag Regex Pattern (FRP)
-# The first one is more strict, but it doesn't work for --value=\"PATTERN\"
+# The first one is more strict, but it doesn't work for --value="PATTERN"
 frp="^-{1,2}[a-zA-Z0-9-]+$"
 frp="^-{1,2}[a-zA-Z0-9-]+"
 
