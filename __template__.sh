@@ -8,11 +8,8 @@
 
 # The so-called strict mode (see https://mywiki.wooledge.org/BashFAQ/105)
 set -e           # "exit-on-error" shell option
-set -o pipefail  # exit on within-pipe error
 set -u           # "no-unset" shell option
-
-# Set up error handling
-trap 'handle_error ${LINENO}' ERR
+set -o pipefail  # exit on within-pipe error
 
 # ==============================================================================
 # NOTE on -e option
@@ -98,15 +95,6 @@ end=$'\e[0m'
 # Default options
 ver="0.0.0"
 verbose=true
-
-# Error handling function
-function handle_error {
-	local err_exit=$?
-	local line_number=$1
-	printf "\n${mag}ERROR occurred on line: ${cya}${line_number}${end}\n"
-	printf "  |__ ${cya}Exit status ${err_exit}${end}\n"
-	exit $err_exit
-}
 
 # Help message
 _help_scriptname=""
