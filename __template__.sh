@@ -116,19 +116,6 @@ Additional Notes:
   You can use this or that to do something...
 EOM
 
-# On-screen and to-file logging function
-#
-# 	USAGE:	_dual_log $verbose log_file "message"
-#
-# Always redirect "message" to log_file; additionally, redirect it to standard
-# output (i.e., print on screen) if $verbose == true
-# NOTE:	the 'sed' part allows tabulations to be stripped, while still allowing
-# 		the code (i.e., multi-line messages) to be indented in a natural fashion.
-function _dual_log {
-	if $1; then echo -e "$3" | sed "s/\t//g"; fi
-	echo -e "$3" | sed "s/\t//g" >> "$2"
-}
-
 # --- Argument parsing ---------------------------------------------------------
 
 # Flag Regex Pattern (FRP)
