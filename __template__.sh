@@ -23,13 +23,35 @@ trap 'handle_error ${LINENO}' ERR
 # means an error. In particular, if you use grep and do NOT consider grep
 # finding no match as an error, you need to use the following syntax
 #
-#   grep "<expression>" "<target>" || [[ $? == 1 ]]
+#     grep "<expression>" "<target>" || [[ $? == 1 ]]
 #
 # to prevent grep from causing premature termination of the script.
 # This works since `[[ $? == 1 ]]` is executed if and only if grep fails (even
 # when `-e` option is active) and, according to POSIX manual, grep exit code
 #   1 means "no lines selected";
 #   > 1 means an error.
+#
+# For the same reason, if you need to use 'ls' you have to do this 
+#
+#      ls "<files>" 2> /dev/null || [[ $? == 2 ]]
+#
+# However, for these purposes it is recommended to use 'find', which does not
+# suffer from such a problem, since it returns an error only when the target
+# directory is not found (which is a much more unlikely event). When even the
+# existence of the searching location is uncertain, you can use:
+#
+#     find "<target_dir>" -type f -iname "<files>" 2> /dev/null || [[ $? == 1 ]]
+#
+# The same is true for 'which':
+#
+#     which <command> 2> /dev/null || [[ $? == 1 ]]
+#
+# In general, remember that enclosing a command within a conditional block
+# allows excluding it from the 'set -e' behavior. E.g.,
+#
+#     if which <command> > /dev/null 2>&1; then ...; fi
+#
+# is fine, even without '|| [[ $? == 1 ]]'.
 #
 # NOTE on -o pipefail option
 # --------------------------
