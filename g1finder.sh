@@ -4,14 +4,14 @@
 #  Seek and Destroy Google Drive's (1)s 
 # ======================================
 #
-# The problem of the "trailing (1)s" from Google Drive only affects local
-# filenames (both in streaming and mirroring modes!) of Google Drive for Desktop
-# (it seems to be actually a Windows problem, rather than Google Drive's). On
-# the contrary, filenames are always clean when looked through the web browser.
-# For this reason, it is possible to distinguish wanted and unwanted (1)s simply
-# by comparing local with remote (i.e., if a local (1) does not exist in remote
-# it is very likely to be an unwanted one). A convenient way to do this, is
-# using `googledrive` CRAN R package from the `tidyverse`.
+# The problem of the "trailing (1)s" from Google Drive only affects local folder
+# and file names (both in streaming and mirroring modes!) of Google Drive for
+# Desktop (it seems to be actually a Windows problem, rather than Google
+# Drive's). On the contrary, names are always clean when looked through the web
+# browser. For this reason, it is possible to distinguish wanted and unwanted
+# (1)s simply by comparing local with remote (i.e., if a local (1) does not
+# exist in remote it is very likely to be an unwanted one). A convenient way to
+# do this, is using `googledrive` CRAN R package from the `tidyverse`.
 #
 # - Run g1finder in `seek` mode on the target directory then manually edit the
 #   output list of filenames to keep just those you want to clean from (1)s
@@ -178,7 +178,12 @@ if [[ "$flag" == "-s" || "$flag" == "--seek" ]]; then
 	touch "$report"/"$meta_name"
 
 	# Find folders and sub-folders that end with the TRP
-	find "$target" -type d | grep -E ".+$trp$" \
+	# NOTE: If a folder name has a dot somewhere, during the unfortunate process
+	# 		of (1) spawning, the substring after the dot will be seen by Windows
+	# 		just like the name extension of a regular file. For this reason, we
+	# 		must consider the possibility that there may be something after the
+	# 		TRP not only in file names, but even in folder names.
+	find "$target" -type d | grep -E ".+$trp(\..+)?$" \
 		> "$report"/"$meta_name"
 
 	# Find regular files that end with the TRP, plus possible filename extension
