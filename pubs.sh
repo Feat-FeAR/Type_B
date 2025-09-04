@@ -114,7 +114,7 @@ year_rgx="[0-9]{2}"     # All years (from 2000 to 2099)
 annexes=false
 tabular=false
 export=false
-destination="."
+destination="${HOME}/papers"
 
 # Flag Regex Pattern (FRP)
 frp="^-{1,2}[a-zA-Z0-9-]+"
@@ -146,15 +146,17 @@ while [[ $# -gt 0 ]]; do
             ;;
             -x | --export)
                 export=true
-                if [[ ! "$2" =~ $frp ]]; then # && $2 is not null
+                if [[ -n "${2:-}" && ! "$2" =~ $frp ]]; then
                     destination="$(realpath "$2")"
-                    if [[ ! -d "$destination" ]]; then
-                        printf "Invalid target directory '$destination'.\n"
-                        exit 1 # Argument failure exit status: invalid TARGETS
-                    fi
+                    shift
                 fi
                 shift
-                shift
+                # Check target directory
+                if [[ ! -d "$destination" ]]; then
+                    mkdir "$destination"
+                    printf "Created target directory '$destination'\n"
+                fi
+                printf "Papers will be exported into '$destination'\n"
             ;;
             --type*)
                 # Test for '=' presence
@@ -162,14 +164,14 @@ while [[ $# -gt 0 ]]; do
                     doctype="${1/--type=/}"
                     if [[ "$doctype" != "A" && "$doctype" != "R" ]]; then 
                         printf "Bad type '$doctype' for the --type option.\n"
-                        exit 1 # Bad format
+                        exit 1
                     fi
                     shift
                 else
                     printf "Values need to be assigned to '--type' option using"
                     printf " the '=' operator.\n"
                     printf "Use '--help' or '-h' to see the correct syntax.\n"
-                    exit 1 # Bad suffix assignment
+                    exit 1
                 fi
             ;;
             --pos*)
@@ -178,14 +180,14 @@ while [[ $# -gt 0 ]]; do
                     position="${1/--pos=/}"
                     if [[ ! $position =~ ^(F|L|FL|LF)$ ]]; then
                         printf "Bad position '$position' for the --pos option.\n"
-                        exit 1 # Bad format
+                        exit 1
                     fi
                     shift
                 else
                     printf "Values need to be assigned to '--pos' option using"
                     printf " the '=' operator.\n"
                     printf "Use '--help' or '-h' to see the correct syntax.\n"
-                    exit 1 # Bad suffix assignment
+                    exit 1
                 fi
             ;;
             --year*)
@@ -200,25 +202,26 @@ while [[ $# -gt 0 ]]; do
                         year_rgx="(${decade}[${year}-9]|[$((decade+1))-9][0-9])"
                     else
                         printf "Bad format for the --year option.\n"
-                        exit 1 # Bad format
+                        exit 1
                     fi
                     shift
                 else
-                    printf "Values need to be assigned to '--year' option using the '='"
-                    printf "operator.\nUse '--help' or '-h' to see the correct syntax.\n"
-                    exit 1 # Bad suffix assignment
+                    printf "Values need to be assigned to '--year' option using"
+                    printf " the '=' operator.\n"
+                    printf "Use '--help' or '-h' to see the correct syntax.\n"
+                    exit 1
                 fi
             ;;
             *)
                 printf "Unrecognized option flag '$1'.\n"
                 printf "Use '--help' or '-h' to see possible options.\n"
-                exit 1 # Argument failure exit status: bad flag
+                exit 1
             ;;
         esac
     else
         printf "Unrecognized option '$1'.\n"
         printf "Use '--help' or '-h' to see possible options.\n"
-        exit 1 # Argument failure exit status: bad flag
+        exit 1
     fi
 done
 
