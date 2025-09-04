@@ -94,9 +94,9 @@ end=$'\e[0m'
 
 # Default options
 ver="0.2.0"
-first_rgx=".*" # Keep all (i.e., do not filter for first author)
-doctype="AR" # Both research articles and Reviews
-year_pub="[0-9][0-9]" # All years (from 2000 to 2099)
+position="a-zA-Z"       # Keep all (i.e., do not filter for author position)
+doctype="AR"            # Both research articles and Reviews
+year_rgx="[0-9]{2}"     # All years (from 2000 to 2099)
 annexes=false
 tabular=false
 export=false
@@ -113,9 +113,9 @@ each publication.
 Show all my works regardless of the position of my name in the list of authors.
 
 Usage:
-    pubs [-h | --help] [-v | --version] [--pos=F|L|FL] [--type=A|R]
-             [--year=YYYY[+]] [-a | --annexes] [-t | --tabular]
-             [-x | --export DESTINATION]
+    pubs [-h | --help] [-v | --version] [--type=A|R] [--pos=F|L|FL]
+         [--year=YY[+]] [-a | --annexes] [-t | --tabular]
+         [-x | --export DESTINATION]
 
 Positional options:
     -h | --help     Shows this help.
@@ -125,9 +125,9 @@ Positional options:
                     respectively.
     --type=A|R      Filters document type, showing either Research Articles
                     (A) or Reviews (R) only.  
-    --year=YYYY[+]  Filters publications by year. YYYY is the year of interest
-                    in four digit format. Use the '+' symbol after the year to
-                    to include all publications from YYYY on.
+    --year=YY[+]    Filters publications by year. YY is the year of interest in
+                    two-digit format (meaning 20YY). Use the '+' symbol after
+                    the year to to include all publications from 20YY on.
     -a | --annexes  Shows also annexes files, such as Supplementary Materials or
                     alternative formats of the final version of the paper.
     -t | --tabular  Shows results in a tabular format.
@@ -157,10 +157,6 @@ while [[ $# -gt 0 ]]; do
                 printf "Ver.${ver}\n"
                 exit 0 # Success exit status
             ;;
-            -f | --first)
-                first_rgx="ruffinatti"
-                shift
-            ;;
             -a | --annexes)
                 annexes=true
                 shift
@@ -179,6 +175,7 @@ while [[ $# -gt 0 ]]; do
                     fi
                 fi
                 shift
+                shift
             ;;
             --type*)
                 # Test for '=' presence
@@ -196,16 +193,32 @@ while [[ $# -gt 0 ]]; do
                     exit 1 # Bad suffix assignment
                 fi
             ;;
+            --pos*)
+                 # Test for '=' presence
+                if [[ "$1" =~ ^--pos=  ]]; then
+                    position="${1/--pos=/}"
+                    if [[ ! $position =~ ^(F|L|FL|LF)$ ]]; then
+                        printf "Bad position '$position' for the --pos option.\n"
+                        exit 1 # Bad format
+                    fi
+                    shift
+                else
+                    printf "Values need to be assigned to '--pos' option using"
+                    printf " the '=' operator.\n"
+                    printf "Use '--help' or '-h' to see the correct syntax.\n"
+                    exit 1 # Bad suffix assignment
+                fi
+            ;;
             --year*)
                 # Test for '=' presence
                 if [[ "$1" =~ ^--year=  ]]; then
                     input_year="${1/--year=/}"
                     if [[ "$input_year" =~ ^[0-9]{2}$ ]]; then
-                        year_pub=$input_year
+                        year_rgx=$input_year
                     elif [[ "$input_year" =~ ^[0-9]{2}\+$ ]]; then
-                        decade="${input_year:1:1}"
-                        year="${input_year:2:1}"
-                        year_pub="${decade}[${year}-9]|[$((decade+1))-9][0-9]"
+                        decade="${input_year:0:1}"
+                        year="${input_year:1:1}"
+                        year_rgx="(${decade}[${year}-9]|[$((decade+1))-9][0-9])"
                     else
                         printf "Bad format for the --year option.\n"
                         exit 1 # Bad format
@@ -232,11 +245,20 @@ done
 
 # --- Main program -------------------------------------------------------------
 
+debug=true
+
 echo
 counter=1
 
 while IFS= read -r project
 do
+    # Debug mode
+    if ${debug}; then
+        printf "$counter ${project}\n"
+        ((counter++))
+        continue
+    fi
+
     # Collect project info
     project_ID="$(basename "$project")"
     size=$(du -h -s "$project" | cut -f1 -d$'\t')
@@ -263,6 +285,9 @@ do
     fi
     while IFS= read -r pub; do
         printf "\t  - $(basename "$pub")\n"
+        if ${export}; then
+            cp "$pub" "$destination"
+        fi
     done <<< $(find "${project}/reports" \
                 -maxdepth 3 \
                 -regextype egrep \
@@ -275,7 +300,5 @@ done <<< $(find "$PWD" \
             -maxdepth 1 \
             -type d \
             -regextype egrep \
-            -iregex ".*/[0-9][0-9][0-9][0-9]-${year_pub}[0-9x][0-9x]-[${doctype}]-.+")
+            -iregex ".*/[0-9]{4}-${year_rgx}[0-9x]{2}-[${doctype}][${position}]-.+")
             
-
-#  | grep -iE "$first_rgx" \
