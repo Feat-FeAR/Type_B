@@ -24,21 +24,21 @@ mag=$'\e[1;35m' # Magenta
 cya=$'\e[1;36m' # Cyan
 end=$'\e[0m'
 
-# --- Help message -------------------------------------------------------------
+# --- Help messages ------------------------------------------------------------
 
-_help_pubs=""
 read -d '' _help_pubs << EOM || true
-This utility script allows monitoring my production of scientific papers.
-If used without arguments... 
-
-Shows the amount of disk space allocated to each project folder asssociated with
-each publication.
-Show all my works regardless of the position of my name in the list of authors.
+This utility script allows monitoring my production of scientific papers. If
+used without arguments, for each closed project, it shows the project ID, the
+filename of the associated publication, the amount of disk space allocated to
+the project folder, a blue 'git' badge and a red 'Kerblam!' badge if a .git
+folder or a kerblam.toml file is found in the root of the project directory,
+respectively. If not otherwise specified, all my works are shown, regardless of
+the position of my name in the list of authors or the date of publication.
 
 Usage:
-    pubs [-h | --help] [-v | --version] [--type=A|R] [--pos=F|L|FL]
-         [--year=YY[+]] [-a | --annexes] [-t | --tabular]
-         [-x | --export DESTINATION]
+    pubs [-h | --help] [-s | --struct | --structure] [-v | --version]
+         [--type=A|R] [--pos=F|L|FL] [--year=YY[+]] [-a | --annexes]
+         [-t | --tabular] [-x | --export DESTINATION]
 
 Positional options:
     -h | --help     Shows this help.
@@ -57,9 +57,52 @@ Positional options:
     -x | --export   Makes a local copy of my papers, accounting for possible
                     filtering parameters included in the query.
     DESTINATION     Target folder for the copy.
+EOM
 
-Additional Notes:
-    ...
+read -d '' _help_struct << EOM || true
+This script assumes that projects are organized in the local file system
+according to the following scheme:
+
+WORKS
+  |__ yymm-YYMM-[AR][FLx]-ID
+       |__ data
+       |    |__ in
+       |    |__ out
+       |__ (docs)
+       |__ (refs)
+       |__ reports
+       |    |__ 0_draft
+       |    |__ 1_submission
+       |    |__ 2_submission
+       |    |__ ...
+       |    |__ x_revision
+       |    |__ ...
+       |    |__ y_proof
+       |    |__ z_final(_v1,2,3...)
+       |    |      |__ <author>_yyyy_<journal>(_v1,2,3...).pdf
+       |    |      |__ (<author>_yyyy_<journal>_Supplementary.pdf)
+       |    |__ (z_supplementary)
+       |    |__ figs
+       |         |__ (supplementary)
+       |         |__ (graphical_abstract)
+       |         |__ (other)
+       |         |__ (parts)
+       |         |__ (old)
+       |__ src
+            |__ dockerfiles
+            |__ workflows
+            |__ (utils)
+
+Where:
+  - the first yymm is the (putative) starting date, while YYMM is the closing
+    one (usually the date of publication)
+  - A = Research article; R = Review
+  - F = first name; L = last name; x = just a name in the middle
+  - ID is the nickname of the project
+  - round brackets (...) denote something that is not mandatory
+  - <author>_YYYY_<journal>.pdf is the standard filename pattern of the final
+    version of the published paper, namely first author(s), year of publication,
+    journal abbreviation (as from PubMed, without spaces).
 EOM
 
 # --- Argument parsing and validity check --------------------------------------
@@ -82,12 +125,16 @@ while [[ $# -gt 0 ]]; do
         case "$1" in
             -h | --help)
                 printf "%s\n" "$_help_pubs"
-                exit 0 # Success exit status
+                exit 0
+            ;;
+            -s | --struct | --structure)
+                printf "%s\n" "$_help_struct"
+                exit 0
             ;;
             -v | --version)
                 figlet PubS
                 printf "Ver.${ver}\n"
-                exit 0 # Success exit status
+                exit 0
             ;;
             -a | --annexes)
                 annexes=true
