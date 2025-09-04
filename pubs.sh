@@ -274,7 +274,8 @@ do
 done <<< $(find "$PWD" \
             -maxdepth 1 \
             -type d \
-            -iname "[0-9][0-9][0-9][0-9]-${year_pub}[0-9x][0-9x]-[${doctype}]-*")
-    
+            -regextype egrep \
+            -iregex ".*/[0-9][0-9][0-9][0-9]-${year_pub}[0-9x][0-9x]-[${doctype}]-.+")
+            
 
 #  | grep -iE "$first_rgx" \
