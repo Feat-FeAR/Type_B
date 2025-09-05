@@ -33,9 +33,9 @@ This utility script allows monitoring my production of scientific papers. If
 used without arguments, for each closed project, it shows the project ID, the
 filename of the associated publication, the amount of disk space allocated to
 the project folder, a blue 'git' badge and a red 'Kerblam!' badge if a .git
-folder or a kerblam.toml file is found in the root of the project directory,
-respectively. If not otherwise specified, all my works are shown, regardless of
-the position of my name in the list of authors or the date of publication.
+folder or a kerblam.toml file is found in the project directory, respectively.
+If not otherwise specified, all my works are shown, regardless of the position
+of my name in the list of authors or the date of publication.
 
 Usage:
     pubs [-h | --help] [-s | --struct | --structure] [-v | --version]
@@ -66,7 +66,7 @@ Additional Options:
     -l | --link     Symlink the original script in some \$PATH directory to make
                     the 'pubs' command globally available.
     TARGET          The path where the symlink is to be created. If omitted, it
-                    defaults to \$PWD. E.g.:                    
+                    defaults to the WD. E.g.:                    
                       /mnt/e/UniTo\ Drive/Coding/Type_B/pubs.sh -l ~/.local/bin/
 EOM
 
@@ -149,7 +149,7 @@ while [[ $# -gt 0 ]]; do
             -l | --link)
                 # Full path of the real script
                 pubs_path="$(realpath "$0")"
-                # Target directory (default to $PWD if unset)
+                # Target directory (default to the WD if unset)
                 target_dir="$(realpath "${2:-.}")"
                 link_path="${target_dir}/pubs"
                 if [[ -e "$link_path" ]]; then
@@ -271,8 +271,7 @@ else
 fi
 
 # Check the current location
-if [[ -z "$(find "$PWD" \
-                -maxdepth 1 -type d \
+if [[ -z "$(find . -mindepth 1 -maxdepth 1 -type d \
                 -regextype egrep -iregex "$prj_rgx")" ]]; then
     printf "Couldn't find any project-containing folder in the WD...\n"
     exit 1
@@ -315,7 +314,8 @@ do
     fi
     project_name="${project_ID:13}"
     size=$(du -h -s "$project" | cut -f1 -d$'\t')
-    if [[ -d "${project}/.git" ]]; then
+    # '| head -n 1' is to stop 'find' at the first match and speed up the computation
+    if [[ -n "$(find "$project" -maxdepth 4 -type d -name ".git" | head -n 1)" ]]; then
         git_badge=${blu}git${end}
     else
         git_badge="---"
@@ -339,7 +339,7 @@ do
         printf "Publications retrieved: ${counter}\r"
         # [-1] index is to keep only the most recent version of the paper in the
         # case of versioned publications (e.g., F1000Res)
-        pub_base="$(basename "${pub_array[-1]}")"
+        pub_base="$(basename "${pub_array[-1]:-}")"
         # Build the CSV by rows
         echo "${counter},${project_name},${start_date},${end_date},${size},${pub_type},${pub_pos},${pub_base}" >> $pubs_tmp
     else
@@ -360,12 +360,14 @@ do
 
     ((counter++))
 
-done <<< $(find "$PWD" \
+done <<< $(find . \
+            -mindepth 1 \
             -maxdepth 1 \
             -type d \
             -regextype egrep \
             -iregex "$prj_rgx")
 
+# Show CSV table on screen
 if ${tabular}; then
     echo
     csvlens $pubs_tmp
