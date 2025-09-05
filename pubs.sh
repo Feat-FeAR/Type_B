@@ -185,6 +185,7 @@ while [[ $# -gt 0 ]]; do
             ;;
             -x | --export)
                 export=true
+                # Overwrite default destination if a target path is provided
                 if [[ -n "${2:-}" && ! "$2" =~ $frp ]]; then
                     destination="$(realpath "$2")"
                     shift
@@ -262,7 +263,7 @@ echo
 
 # Project Regex
 prj_rgx=".*/[0-9]{4}-${year_rgx}[0-9x]{2}-[${doctype}][${position}]-.+"
-# Publication Regex
+# Publication Regex (ignore annexes in tabular mode)
 if ${annexes} && ! ${tabular}; then
     pub_rgx=".+_final(_v.+)?/.+_[0-9]{4}_.+\..+"
 else
@@ -280,9 +281,11 @@ fi
 # Make a temporary file for tabular view
 if ${tabular}; then
     pubs_tmp=$(mktemp)
+    # Set table header
     echo "n,Project Name,Started,Ended,Size,Pub Type,Position,Pub Filename" >> $pubs_tmp
 fi
 
+# Start the main 'while' loop
 debug=false
 counter=1
 while IFS= read -r project
@@ -296,8 +299,8 @@ do
 
     # Collect project info
     project_ID="$(basename "$project")"
-    start_date="${project_ID:2:2}-20${project_ID:0:2}"
-    end_date="${project_ID:7:2}-20${project_ID:5:2}"
+    start_date="20${project_ID:0:2}-${project_ID:2:2}"
+    end_date="20${project_ID:5:2}-${project_ID:7:2}"
     if [[ "${project_ID:10:1}" == "A" ]]; then
         pub_type="Article"
     elif [[ "${project_ID:10:1}" == "R" ]]; then
@@ -334,7 +337,10 @@ do
     # Print report
     if ${tabular}; then
         printf "Publications retrieved: ${counter}\r"
+        # [-1] index is to keep only the most recent version of the paper in the
+        # case of versioned publications (e.g., F1000Res)
         pub_base="$(basename "${pub_array[-1]}")"
+        # Build the CSV by rows
         echo "${counter},${project_name},${start_date},${end_date},${size},${pub_type},${pub_pos},${pub_base}" >> $pubs_tmp
     else
         printf "   ${counter}\t${grn}${project_ID}${end}\n"
