@@ -261,7 +261,7 @@ echo
 # Project Regex
 prj_rgx=".*/[0-9]{4}-${year_rgx}[0-9x]{2}-[${doctype}][${position}]-.+"
 # Publication Regex
-if ${annexes}; then
+if ${annexes} && ! ${tabular}; then
     pub_rgx=".+_final(_v.+)?/.+_[0-9]{4}_.+\..+"
 else
     pub_rgx=".+_final(_v.+)?/.+_[0-9]{4}_[^_]+(_v.+)?\.pdf$"
