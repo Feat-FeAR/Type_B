@@ -142,7 +142,7 @@ while [[ $# -gt 0 ]]; do
                     printf "Removing old symlink...\n"
                     rm "$link_path"
                 fi
-                printf "Creating a new PubS symlink in '$(dirname ${link_path})'\n"
+                printf "Creating a new PubS symlink in '$(dirname "${link_path}")'\n"
                 ln -s "$pubs_path" "$link_path"
                 exit 0
             ;;
