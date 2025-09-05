@@ -253,9 +253,26 @@ done
 # --- Main program -------------------------------------------------------------
 
 echo
+
+# Project Regex
+prj_rgx=".*/[0-9]{4}-${year_rgx}[0-9x]{2}-[${doctype}][${position}]-.+"
+# Publication Regex
+if ${annexes}; then
+    pub_rgx=".+_final(_v.+)?/.+_[0-9]{4}_.+\..+"
+else
+    pub_rgx=".+_final(_v.+)?/.+_[0-9]{4}_[^_]+(_v.+)?\.pdf$"
+fi
+
+# Check the current location
+if [[ -z "$(find "$PWD" \
+                -maxdepth 1 -type d \
+                -regextype egrep -iregex "$prj_rgx")" ]]; then
+    printf "Couldn't find any project-containing folder in the WD...\n"
+    exit 1
+fi
+
 debug=false
 counter=1
-
 while IFS= read -r project
 do
     # Debug mode
@@ -284,11 +301,6 @@ do
     printf "\t${size}B  $git_flag  ${ker_flag}\n"
 
     # Find publications
-    if ${annexes}; then
-        pub_rgx=".+_final(_v.+)?/.+_[0-9]{4}_.+\..+"
-    else
-        pub_rgx=".+_final(_v.+)?/.+_[0-9]{4}_[^_]+(_v.+)?\.pdf$"
-    fi
     while IFS= read -r pub; do
         printf "\t  - $(basename "$pub")\n"
         if ${export}; then
@@ -296,6 +308,7 @@ do
         fi
     done <<< $(find "${project}/reports" \
                 -maxdepth 3 \
+                -type f \
                 -regextype egrep \
                 -iregex "$pub_rgx")
 
@@ -306,5 +319,5 @@ done <<< $(find "$PWD" \
             -maxdepth 1 \
             -type d \
             -regextype egrep \
-            -iregex ".*/[0-9]{4}-${year_rgx}[0-9x]{2}-[${doctype}][${position}]-.+")
+            -iregex "$prj_rgx")
             
