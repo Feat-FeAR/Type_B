@@ -28,6 +28,7 @@ end=$'\e[0m'
 
 read -d '' _help_pubs << EOM || true
 PubS retrieves publications from a Structured local filesystem.
+--------------------------------------------------------------------------------
 This utility script allows monitoring my production of scientific papers. If
 used without arguments, for each closed project, it shows the project ID, the
 filename of the associated publication, the amount of disk space allocated to
@@ -44,12 +45,13 @@ Usage:
 
 Positional Options:
     -h | --help     Shows this help.
+    -s | --struct   Shows the filesystem structure required. 
     -v | --version  Shows script's version.
+    --type=A|R      Filters document type, showing either Research Articles
+                    (A) or Reviews (R) only.
     --pos=F|L|FL    Show only papers where my name appears in the (co-)first
                     position, in the (co-)last position, or in either position,
                     respectively.
-    --type=A|R      Filters document type, showing either Research Articles
-                    (A) or Reviews (R) only.  
     --year=YY[+]    Filters publications by year. YY is the year of interest in
                     two-digit format (meaning 20YY). Use the '+' symbol after
                     the year to to include all publications from 20YY on.
@@ -278,7 +280,7 @@ fi
 # Make a temporary file for tabular view
 if ${tabular}; then
     pubs_tmp=$(mktemp)
-    echo "n,Project ID,Size,Filename" >> $pubs_tmp
+    echo "n,Project Name,Started,Ended,Size,Pub Type,Position,Pub Filename" >> $pubs_tmp
 fi
 
 debug=false
@@ -294,6 +296,21 @@ do
 
     # Collect project info
     project_ID="$(basename "$project")"
+    start_date="${project_ID:2:2}-20${project_ID:0:2}"
+    end_date="${project_ID:7:2}-20${project_ID:5:2}"
+    if [[ "${project_ID:10:1}" == "A" ]]; then
+        pub_type="Article"
+    elif [[ "${project_ID:10:1}" == "R" ]]; then
+        pub_type="Review"
+    fi
+    if [[ "${project_ID:11:1}" == "F" ]]; then
+        pub_pos="First Author"
+    elif [[ "${project_ID:11:1}" == "L" ]]; then
+        pub_pos="Last Author"
+    else
+        pub_pos=""
+    fi
+    project_name="${project_ID:13}"
     size=$(du -h -s "$project" | cut -f1 -d$'\t')
     if [[ -d "${project}/.git" ]]; then
         git_badge=${blu}git${end}
@@ -318,7 +335,7 @@ do
     if ${tabular}; then
         printf "Publications retrieved: ${counter}\r"
         pub_base="$(basename "${pub_array[-1]}")"
-        echo "${counter},${project_ID},${size},${pub_base}" >> $pubs_tmp
+        echo "${counter},${project_name},${start_date},${end_date},${size},${pub_type},${pub_pos},${pub_base}" >> $pubs_tmp
     else
         printf "   ${counter}\t${grn}${project_ID}${end}\n"
         printf "\t${size}B  $git_badge  ${ker_badge}\n"
