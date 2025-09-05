@@ -27,6 +27,7 @@ end=$'\e[0m'
 # --- Help messages ------------------------------------------------------------
 
 read -d '' _help_pubs << EOM || true
+PubS retrieves publications from a Structured local filesystem.
 This utility script allows monitoring my production of scientific papers. If
 used without arguments, for each closed project, it shows the project ID, the
 filename of the associated publication, the amount of disk space allocated to
@@ -39,7 +40,7 @@ Usage:
     pubs [-h | --help] [-s | --struct | --structure] [-v | --version]
          [--type=A|R] [--pos=F|L|FL] [--year=YY[+]] [-a | --annexes]
          [-t | --tabular] [-x | --export DESTINATION]
-    pubs -l | --links [TARGET]
+    pubs -l | --link [TARGET]
 
 Positional Options:
     -h | --help     Shows this help.
@@ -60,10 +61,10 @@ Positional Options:
     DESTINATION     Target folder for the copy.
 
 Additional Options:
-    -l | --links    Symlink the original script in some \$PATH directory to make
+    -l | --link     Symlink the original script in some \$PATH directory to make
                     the 'pubs' command globally available.
-    TARGET          The path where the symlinks are to be created. If omitted,
-                    it defaults to \$PWD. E.g.:                    
+    TARGET          The path where the symlink is to be created. If omitted, it
+                    defaults to \$PWD. E.g.:                    
                       /mnt/e/UniTo\ Drive/Coding/Type_B/pubs.sh -l ~/.local/bin/
 EOM
 
@@ -131,7 +132,7 @@ frp="^-{1,2}[a-zA-Z0-9-]+"
 while [[ $# -gt 0 ]]; do
     if [[ "$1" =~ $frp ]]; then
         case "$1" in
-            -l | --links)
+            -l | --link)
                 # Full path of the real script
                 pubs_path="$(realpath "$0")"
                 # Target directory (default to $PWD if unset)
@@ -154,8 +155,10 @@ while [[ $# -gt 0 ]]; do
                 exit 0
             ;;
             -v | --version)
-                figlet PubS
-                printf "Ver.${ver}\n"
+                figlet "   PubS"
+                printf "           Ver.${ver}\n\n"
+                printf " retrieves Publications from a\n"
+                printf "  Structured local filesystem\n"
                 exit 0
             ;;
             -a | --annexes)
@@ -261,7 +264,7 @@ do
         ((counter++))
         continue
     fi
-    
+
     # Collect project info
     project_ID="$(basename "$project")"
     size=$(du -h -s "$project" | cut -f1 -d$'\t')
