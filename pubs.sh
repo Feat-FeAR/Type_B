@@ -55,7 +55,7 @@ Positional Options:
                     the year to to include all publications from 20YY on.
     -a | --annexes  Shows also annexes files, such as Supplementary Materials or
                     alternative formats of the final version of the paper.
-    -t | --tabular  Shows results in a tabular format.
+    -t | --tabular  Shows results in a tabular (CSV) format. Requires 'csvlens'!
     -x | --export   Makes a local copy of my papers, accounting for possible
                     filtering parameters included in the query.
     DESTINATION     Target folder for the copy.
@@ -113,6 +113,18 @@ Where:
     version of the published paper, namely first author(s), year of publication,
     journal abbreviation (as from PubMed, without spaces).
 EOM
+
+# --- functions ----------------------------------------------------------------
+
+function _bad_assignment {
+    printf "Values need to be assigned to '$1' option using the '=' operator.\n"
+    printf "Use '--help' or '-h' to see the correct syntax.\n"
+}
+
+function _bad_option {
+    printf "Unrecognized option '$1'.\n"
+    printf "Use '--help' or '-h' to see possible options.\n"
+}
 
 # --- Argument parsing and validity check --------------------------------------
 
@@ -193,9 +205,7 @@ while [[ $# -gt 0 ]]; do
                     fi
                     shift
                 else
-                    printf "Values need to be assigned to '--type' option using"
-                    printf " the '=' operator.\n"
-                    printf "Use '--help' or '-h' to see the correct syntax.\n"
+                    _bad_assignment "--type"
                     exit 1
                 fi
             ;;
@@ -209,9 +219,7 @@ while [[ $# -gt 0 ]]; do
                     fi
                     shift
                 else
-                    printf "Values need to be assigned to '--pos' option using"
-                    printf " the '=' operator.\n"
-                    printf "Use '--help' or '-h' to see the correct syntax.\n"
+                    _bad_assignment "--pos"
                     exit 1
                 fi
             ;;
@@ -231,21 +239,17 @@ while [[ $# -gt 0 ]]; do
                     fi
                     shift
                 else
-                    printf "Values need to be assigned to '--year' option using"
-                    printf " the '=' operator.\n"
-                    printf "Use '--help' or '-h' to see the correct syntax.\n"
+                    _bad_assignment "--year"
                     exit 1
                 fi
             ;;
             *)
-                printf "Unrecognized option flag '$1'.\n"
-                printf "Use '--help' or '-h' to see possible options.\n"
+                _bad_option "$1"
                 exit 1
             ;;
         esac
     else
-        printf "Unrecognized option '$1'.\n"
-        printf "Use '--help' or '-h' to see possible options.\n"
+        _bad_option "$1"
         exit 1
     fi
 done
@@ -271,6 +275,12 @@ if [[ -z "$(find "$PWD" \
     exit 1
 fi
 
+# Make a temporary file for tabular view
+if ${tabular}; then
+    pubs_tmp=$(mktemp)
+    echo "n,Project ID,Size,Filename" >> $pubs_tmp
+fi
+
 debug=false
 counter=1
 while IFS= read -r project
@@ -286,33 +296,45 @@ do
     project_ID="$(basename "$project")"
     size=$(du -h -s "$project" | cut -f1 -d$'\t')
     if [[ -d "${project}/.git" ]]; then
-        git_flag=${blu}git${end}
+        git_badge=${blu}git${end}
     else
-        git_flag="---"
+        git_badge="---"
     fi
     if [[ -f "${project}/kerblam.toml" ]]; then
-        ker_flag=${red}Kerblam!${end}
+        ker_badge=${red}Kerblam!${end}
     else
-        ker_flag="---"
+        ker_badge="---"
     fi
 
+    # Find publications associated with 'project' and store them into an array
+    mapfile -d '' pub_array < <(find "${project}/reports" \
+                                -maxdepth 3 \
+                                -type f \
+                                -regextype egrep \
+                                -iregex "$pub_rgx" \
+                                -print0)
+
     # Print report
-    printf "   ${counter}\t${grn}${project_ID}${end}\n"
-    printf "\t${size}B  $git_flag  ${ker_flag}\n"
-
-    # Find publications
-    while IFS= read -r pub; do
-        printf "\t  - $(basename "$pub")\n"
-        if ${export}; then
+    if ${tabular}; then
+        printf "Publications retrieved: ${counter}\r"
+        pub_base="$(basename "${pub_array[-1]}")"
+        echo "${counter},${project_ID},${size},${pub_base}" >> $pubs_tmp
+    else
+        printf "   ${counter}\t${grn}${project_ID}${end}\n"
+        printf "\t${size}B  $git_badge  ${ker_badge}\n"
+        for pub in "${pub_array[@]}"; do
+            printf "\t  - $(basename "$pub")\n"
+        done
+        printf "\n"
+    fi
+    
+    # Export publications
+    if ${export}; then
+        for pub in "${pub_array[@]}"; do
             cp "$pub" "$destination"
-        fi
-    done <<< $(find "${project}/reports" \
-                -maxdepth 3 \
-                -type f \
-                -regextype egrep \
-                -iregex "$pub_rgx")
+        done
+    fi
 
-    printf "\n"
     ((counter++))
 
 done <<< $(find "$PWD" \
@@ -320,4 +342,8 @@ done <<< $(find "$PWD" \
             -type d \
             -regextype egrep \
             -iregex "$prj_rgx")
-            
+
+if ${tabular}; then
+    echo
+    csvlens $pubs_tmp
+fi
