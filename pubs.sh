@@ -39,8 +39,9 @@ Usage:
     pubs [-h | --help] [-s | --struct | --structure] [-v | --version]
          [--type=A|R] [--pos=F|L|FL] [--year=YY[+]] [-a | --annexes]
          [-t | --tabular] [-x | --export DESTINATION]
+    pubs -l | --links [TARGET]
 
-Positional options:
+Positional Options:
     -h | --help     Shows this help.
     -v | --version  Shows script's version.
     --pos=F|L|FL    Show only papers where my name appears in the (co-)first
@@ -57,6 +58,13 @@ Positional options:
     -x | --export   Makes a local copy of my papers, accounting for possible
                     filtering parameters included in the query.
     DESTINATION     Target folder for the copy.
+
+Additional Options:
+    -l | --links    Symlink the original script in some \$PATH directory to make
+                    the 'pubs' command globally available.
+    TARGET          The path where the symlinks are to be created. If omitted,
+                    it defaults to \$PWD. E.g.:                    
+                      /mnt/e/UniTo\ Drive/Coding/Type_B/pubs.sh -l ~/.local/bin/
 EOM
 
 read -d '' _help_struct << EOM || true
@@ -123,6 +131,20 @@ frp="^-{1,2}[a-zA-Z0-9-]+"
 while [[ $# -gt 0 ]]; do
     if [[ "$1" =~ $frp ]]; then
         case "$1" in
+            -l | --links)
+                # Full path of the real script
+                pubs_path="$(realpath "$0")"
+                # Target directory (default to $PWD if unset)
+                target_dir="$(realpath "${2:-.}")"
+                link_path="${target_dir}/pubs"
+                if [[ -e "$link_path" ]]; then
+                    printf "Removing old symlink...\n"
+                    rm "$link_path"
+                fi
+                printf "Creating a new PubS symlink in '$(dirname ${link_path})'\n"
+                ln -s "$pubs_path" "$link_path"
+                exit 0
+            ;;
             -h | --help)
                 printf "%s\n" "$_help_pubs"
                 exit 0
@@ -239,7 +261,7 @@ do
         ((counter++))
         continue
     fi
-
+    
     # Collect project info
     project_ID="$(basename "$project")"
     size=$(du -h -s "$project" | cut -f1 -d$'\t')
