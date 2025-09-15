@@ -6,73 +6,17 @@
 
 # --- General settings and variables -------------------------------------------
 
-# The so-called strict mode (see https://mywiki.wooledge.org/BashFAQ/105)
-set -e           # "exit-on-error" shell option
-set -u           # "no-unset" shell option
-set -o pipefail  # exit on within-pipe error
+# Strict mode options (set -euEo pipefail)
+set -e              # "exit-on-error" (non-zero status) (aka set -o errexit)
+set -u              # "no-unset" shell option (aka set -o nounset)
+set -o pipefail     # exit on within-pipe (but not process substitution) error
+set -o errtrace     # `ERR` trap inherited by functions and subshells (and thus
+                    # by pipes, command substitutions, process substitutions)
+                    # (aka set -E)
 
-# ==============================================================================
-# NOTE on -e option
-# -----------------
-# `set -e` immediately stops the execution of a script if a command has non-zero
-# exit status. This is the opposite of the default shell behavior, which is to
-# ignore errors in scripts. The problem is that a non-zero exit code not always
-# means an error. In particular, if you use `grep` (or `pgrep`) and do NOT
-# consider finding no match as an error, you need to use the following syntax
-#
-#     grep "<expression>" "<target>" || [[ $? == 1 ]]
-#
-# to prevent `grep` from causing premature termination of the script.
-# This works since `[[ $? == 1 ]]` is executed if and only if `grep` fails (even
-# when `-e` option is active!) and, according to POSIX manual, `grep` exit code
-#   1 means "no lines selected";
-#   > 1 means an error.
-#
-# For the same reason, if you need to use `ls` you have to do this 
-#
-#      ls "<files>" 2> /dev/null || [[ $? == 2 ]]
-#
-# However, for these purposes it is recommended to use `find`, which does not
-# suffer from such a problem, since it returns an error only when the target
-# directory is not found (which is a much more unlikely event). When even the
-# existence of the searching location is uncertain, you can use:
-#
-#     find "<target_dir>" -type f -iname "<files>" 2> /dev/null || [[ $? == 1 ]]
-#
-# The same is true for `which`:
-#
-#     which <command> 2> /dev/null || [[ $? == 1 ]]
-#
-# In general, remember that enclosing a command within a conditional block
-# allows excluding it from the `set -e` behavior. E.g.,
-#
-#     if which <command> > /dev/null 2>&1; then ...; fi
-#
-# is fine, even without `|| [[ $? == 1 ]]`.
-#
-# NOTE on -o pipefail option
-# --------------------------
-# By default, the exit status of a pipe of many commands is the exit status of
-# the last (rightmost) command in the pipe. By setting `-o pipefail` the exit
-# status of the first (leftmost) non-zero command of the pipeline is propagated
-# to the end. However, the remaining commands in the pipeline still run and, if
-# the `-e` option is set, the script will exit at the end of the failing
-# pipeline (to be regarded as a single command).
-# When using grep within a pipeline with both `-o pipefail` and `-e` option set,
-# put the `|| [[ $? == 1 ]]` condition at the end of the pipeline.
-#
-#   grep "<expression>" "<target>" | command_2 | command_3 || [[ $? == 1 ]] 
-#
-# NOTE on -u option
-# ------------------
-# The existence operator ${:-} allows avoiding errors when testing variables by
-# providing a default value in case the variable is not defined or empty.
-#
-# result=${var:-value}
-#
-# If `var` is unset or null, `value` is substituted (and assigned to `results`).
-# Otherwise, the value of `var` is substituted and assigned.
-# ==============================================================================
+# Set up error handling. General syntax:
+#   trap 'handler_command' ERR
+# Whenever a command fails (nonzero exit code), 'handler_command' is run.
 
 # Current date and time in "yyyy.mm.dd_HH.MM.SS" format
 now="$(date +"%Y.%m.%d_%H.%M.%S")"
@@ -180,7 +124,6 @@ fi
 # --- Main program -------------------------------------------------------------
 
 ### Stuff goes here
-
 
 end=$(date +%s)
 runtime=$((end-start))
